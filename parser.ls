@@ -8,7 +8,7 @@ stdin
   .resume!
   .on \data -> program += it
   .on \end  ->
-    console.log parse createStack program
+    show stringify parse two createStack program
 
 createStack = (program) ->
   i = 0
@@ -18,122 +18,53 @@ createStack = (program) ->
     | otherwise     => program[i++]
   push = ->
     tokens.push it
-  popLevel = ->
-    result = []
-    level = 0
-    while c = pop!
-      switch
-      | c is '('
-        ++level
-      | c is ')'
-        if level
-          --level
-        else
-          push c
-          return result
-      | otherwise
-        result.push c
-    result
-  pushAll = (cs) ->
-    while c = cs.pop! => push c
+  { push, pop }
 
-  { push, pop, popLevel, pushAll }
-
-# patch
-patch = ({ push, pop, popLevel, pushAll }:stack) ->
-  while c = pop!
+one = ({ push, pop }:stack) ->
+  name = ''
+  do
+    c = pop!
+  while c is /\s/
+  return unless c
+  do
     switch
-    | c is /\s/
-      continue
-    | c is '('
-      return parse stack
-    | c is '\\' or c is /[^\(\)]/
-      program = popLevel!
-      push ')'
-      pushAll program
-      push c
-      return parse stack
+    | c is /[\s\)]/  => return name
+    | c is /[^\(]/ => name += c
+  while c = pop!
+  name
 
-# parse
-# String -> Int -> SyntaxTree
-parse = ({ push, pop }:stack) ->
-  current = ['app']
-  # remove heading spaces
-  while c = pop!
-    if c isnt /\s/
-      push c
-      break
-  while c = pop!
+two = ({ push, pop }:stack) ->
+  current = []
+  do
+    c = pop!
+  while c is /\s/
+  return current unless c
+  do
     switch
-    | c is ')'
+    | c is /[\(\\]/
+      current.push two stack
+    | c is /[^\)]/
+      push c
+      v = one stack
+      current.push v if v
+    | otherwise
       return current
-    | c is '\\'
-      current.push parseLambda stack
-    | c is '('
-      current.push parse stack
-    | c is /[^\s]/
-      push c
-      current.push parseVar stack
-  console.log current
+    return current if current.length is 2
+  while c = pop!
   current
 
-# parseVar and parseLambda assume there are no heading spaces.
-parseVar = ({ push, pop }) ->
-  name = ''
-  while c = pop!
-    switch
-    | c is /[\)\s]/  => return ['var', name]
-    | c is /[^\(]/ => name += c
-    | otherwise    => throw new Error "invalid var name: '#c'"
-
-parseLambda = ({ push, pop }:stack) ->
-  ready = false
-  name = ''
-  body = null
-  while c = pop!
-    switch
-    | c is '('
-      body = parse stack
-    | c is ')'
-      return ['lam', name, body]
-    | c is /\s/
-      ready = true
-    | otherwise
-      if ready
-        push c
-        body = patch stack
-      else
-        name += c
-
-# mergeFrees
-mergeFrees = ([xs = {}, ys = {}]) ->
-  rs = {}
-  xs |> obj-to-pairs |> each ([xk, xv]) ->
-    ys |> obj-to-pairs |> each ([yk, yv]) ->
-      if not rs[xk] then rs[xk] = []
-      rs[xk].push xv
-      if not rs[yk] then rs[yk] = []
-      rs[yk].push yv
-  rs
-
-# calculateFrees
-calculateFrees = (tree) ->
-  | not tree                 => {}
-  | not tree.children.length => tree.free
+parse = ->
+  | it.0 |> is-type \String
+    if it.length is 2
+      then [\lam, it.0, parse(it.1)]
+      else [\var it.0]
   | otherwise
-    tree.children |> map calculateFrees |> mergeFrees
+    if it.length is 2
+      then [\app, parse(it.0), parse(it.1)]
+      else parse it.0
 
-# show
-show = (tree) ->
-  if not tree then return ''
-  switch tree.type
-  | \lam => "(\\#{tree.bounded.name} #{show tree.children.0})"
-  | \var => "#{keys(tree.free).0}"
-  | \app => "#{show tree.children.0} #{show tree.children.1}"
+show = ->
+  console.log it
+  it
 
-# weakHeadNormalForm
-weakHeadNormalForm = (tree) ->
-  ...
-
-sub = (func, arg, name) ->
-  ...
+stringify = -> JSON.stringify it
