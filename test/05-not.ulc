@@ -1,0 +1,7 @@
+(\true
+(\false
+(\not
+  ((not)(true))
+)(\p(\a(\b(((p)(b))(a)))))
+)(\a(\b(b)))
+)(\a(\b(a)))
