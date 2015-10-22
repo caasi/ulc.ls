@@ -1,0 +1,29 @@
+(\+1
+(\0
+(\1 (\2 (\3 (\4 (\5 (\6 (\7 (\8 (\9
+
+(\nil
+(\cons
+
+(\Y
+
+(\take
+(\map
+
+(\0-1-2-
+
+  take 5 0-1-2-
+
+)(Y \0-1-2- cons 0 (map +1 0-1-2-))
+
+)(\f Y \go \ls ls (\a \as cons (f a) (go as)) nil)
+)(Y \take \n \ls n (\n- ls (\a \as cons a (take n- as)) nil) nil)
+
+)(\f (\x f (x x)) (\x f (x x)))
+
+)(\a \as \is-cons \is-nil is-cons a as)
+)(\is-cons \is-nil is-nil)
+
+)(+1 8))(+1 7))(+1 6))(+1 5))(+1 4))(+1 3))(+1 2))(+1 1))(+1 0)
+)(\s \z z)
+)(\n \s \z s n)

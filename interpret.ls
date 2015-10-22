@@ -1,12 +1,8 @@
 #!/usr/bin/env lsc
 global <<< require 'prelude-ls'
-#ast = require './json/00-and.json'
-#ast = require './json/01-not.json'
-ast = require './json/02-succ.json'
+{ stdin } = process
 
-show = ->
-  console.log JSON.stringify it
-  it
+running-as-script = not module.parent
 
 pretty = (node) ->
   if not node then ''
@@ -117,7 +113,13 @@ normalForm = (node) ->
       #normalForm subs lam.2, node.2, lam.1, frees
       normalForm subsDeBruijnIndex lam.2, node.2
 
-console.log pretty ast
-ast = deBruijnIndex ast
-show ast
-console.log pretty normalForm ast
+if running-as-script
+  program = ''
+  stdin
+    .resume!
+    .on \data -> program += it
+    .on \end  ->
+      ast = JSON.parse program
+      console.log pretty normalForm deBruijnIndex ast
+else
+  module.exports = -> normalForm deBruijnIndex it
