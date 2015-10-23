@@ -4,94 +4,61 @@ global <<< require 'prelude-ls'
 
 running-as-script = not module.parent
 
-isLam = (cs, start, end) ->
-  confirm = false
-  for i from start til end
-    if cs[i] is /\s/
-      continue
-    else if cs[i] is '\\'
-      confirm = true
-      break
-    else
-      break
-  #console.log cs.slice(start, end).join('').replace(/[\r\n\s]+/g, ' ')
-  #console.log confirm
-  confirm
+stringFromRange = (cs, start, end) ->
+  cs.slice(start, end).join('').replace(/[\r\n\s]+/g, ' ')
 
 parseVar = (cs, start, end) ->
-  if (start > end) then [start, end] = [end + 1, start + 1]
   [\var, cs.slice(start, end).join('')]
 
 parseLam = (cs, start, end) ->
   root = [\lam]
   i = start
-  while i isnt end
-    c = cs[i]
+  while i < end
     switch
-    | c is '\\'
+    | cs[i] is '\\'
       j = i + 1
-      until cs[j] is /\s/ => ++j
+      until cs[j] is /[\(\)\\\s]/ => ++j
       root.push cs.slice(i + 1, j).join('')
-      root.push if isLam(cs, j + 1, end)
-        then parseLam(cs, j + 1, end)
-        else parseApp(cs, end - 1, j)
+      func = if cs[j] is '\\' then parseLam else parseApp
+      root.push func(cs, j + 1, end)
       i = end
     | otherwise
       ++i
   root
 
 parseApp = (cs, start, end) ->
+  ranges = [];
   root = []
   prev = root
-  name-idx = void
-  depth = 1
-  i = end + 1
-  while i isnt start + 1
+  i = start
+  while i < end
     switch
-    | cs[i] is '(' => ++depth
-    | cs[i] is ')' => --depth
-    break if depth is 1 and cs[i] is '\\'
-    ++i
-  if i isnt start + 1 # found a lambda
-    curr = [parseLam(cs, i, start + 1)]
-    prev = prev.unshift \app, curr
-    prev = curr
-  --i
-  while i isnt end
-    c = cs[i]
-    switch
-    | c is ')'
+    | cs[i] is '('
+      j = i + 1
       depth = 1
-      j = i - 1
       loop
+        c = cs[j++]
         switch
-        | cs[j] is ')' => ++depth
-        | cs[j] is '(' => --depth
+        | c is '(' => ++depth
+        | c is ')' => --depth
         break if depth is 0
-        --j
-      curr = if isLam(cs, j + 1, i)
-        then [parseLam(cs, j + 1, i)]
-        else [parseApp(cs, i - 1, j)]
-      prev.unshift \app, curr
-      prev = curr
-      i = j - 1
-    | c is /\s/
-      if name-idx isnt void
-        curr = [parseVar(cs, name-idx, i)]
-        prev.unshift \app, curr
-        prev = curr
-        name-idx = void
-      --i
+      ranges.push [parseApp, i + 1, j - 1]
+      i = j
+    | cs[i] is '\\'
+      ranges.push [parseLam, i, end]
+      i = end
+    | cs[i] is /[^\(\)\\\s]/
+      j = i + 1
+      until cs[j] is /[\(\)\\\s]/ => ++j
+      ranges.push [parseVar, i, j]
+      i = j
     | otherwise
-      if name-idx is void
-        name-idx = i
-      --i
-  if name-idx isnt void
-    curr = [parseVar(cs, name-idx, i)]
-    prev.unshift \app, curr
-    prev = curr
-    name-idx = void
-  prev.push ...prev.pop!
+      ++i
+  while range = ranges.pop!
+    node = [range.0(cs, range.1, range.2)]
+    prev = prev.unshift \app, node
+    prev = node
+  prev.push ...prev.pop! # [[left], right] => [left, right]
   root.1
 
 if running-as-script
@@ -101,8 +68,8 @@ if running-as-script
     .on \data -> program += it
     .on \end  ->
       cs = Array.from program
-      console.log JSON.stringify parseApp cs, cs.length - 1, -1
+      console.log JSON.stringify parseApp cs, 0, cs.length
 else
   module.exports = ->
     cs = Array.from it
-    parseApp cs, cs.length - 1, -1
+    parseApp cs, 0, cs.length
