@@ -107,12 +107,13 @@ weakNormalForm = (node) ->
     else
       #frees = getFreeVars node.2
       #weakNormalForm subs lam.2, node.2, lam.1, frees
-      # remember the result #
+      weakNormalForm subsDeBruijnIndex lam.2, node.2
+      /*
       hash = prettyDeBruijnIndex node
       unless env[hash]
         env[hash] = weakNormalForm subsDeBruijnIndex lam.2, node.2
       env[hash]
-      # remember the result #
+      */
 
 normalForm = (node) ->
   switch node.0
