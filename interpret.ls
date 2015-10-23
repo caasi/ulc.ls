@@ -11,6 +11,13 @@ pretty = (node) ->
   | \app => "#{pretty node.1} #{pretty node.2}"
   | \lam => "(\\#{node.1} #{pretty node.2})"
 
+prettyDeBruijnIndex = (node) ->
+  if not node then ''
+  switch node.0
+  | \var => "#{node.2}"
+  | \app => "#{prettyDeBruijnIndex node.1}#{prettyDeBruijnIndex node.2}"
+  | \lam => "(\\#{prettyDeBruijnIndex node.2})"
+
 getFreeVars = (node) ->
   switch node.0
   | \var => [node.1]
@@ -88,6 +95,8 @@ subsDeBruijnIndex = (body, arg, depth = 1) ->
   | \lam
     [\lam, body.1, subsDeBruijnIndex(body.2, arg, depth + 1)]
 
+env = {}
+
 weakNormalForm = (node) ->
   switch node.0
   | \var \lam => node
@@ -98,7 +107,12 @@ weakNormalForm = (node) ->
     else
       #frees = getFreeVars node.2
       #weakNormalForm subs lam.2, node.2, lam.1, frees
-      weakNormalForm subsDeBruijnIndex lam.2, node.2
+      # remember the result #
+      hash = prettyDeBruijnIndex node
+      unless env[hash]
+        env[hash] = weakNormalForm subsDeBruijnIndex lam.2, node.2
+      env[hash]
+      # remember the result #
 
 normalForm = (node) ->
   switch node.0
@@ -121,5 +135,6 @@ if running-as-script
     .on \end  ->
       ast = JSON.parse program
       console.log pretty normalForm deBruijnIndex ast
+      #console.log prettyDeBruijnIndex normalForm deBruijnIndex ast
 else
   module.exports = -> normalForm deBruijnIndex it
