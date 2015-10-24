@@ -14,3 +14,6 @@ time cat ./test/04-inf.ulc | ./parse.ls | ./interpret.ls
 
 # fibs
 time cat ./test/fibs.ulc | ./parse.ls | ./interpret.ls
+
+# w
+time cat ./test/w.ulc | ./parse.ls | ./interpret.ls
